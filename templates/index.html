@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Music Control</title>
+    <style>
+        :root {
+            --primary-color: #4a76a8;
+            --secondary-color: #f5f5f5;
+            --accent-color: #ff6b6b;
+            --text-color: #333;
+            --light-text: #777;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .player-container {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        audio {
+            width: 100%;
+            margin-bottom: 1.5rem;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        button:hover {
+            background-color: #3a5f8a;
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        #result {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #e8f4fc;
+            border-radius: 5px;
+            border-left: 4px solid var(--primary-color);
+            min-height: 20px;
+        }
+        
+        .command-list {
+            margin-top: 2rem;
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .command-list h3 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+        
+        .command-list ul {
+            padding-left: 1.5rem;
+        }
+        
+        .command-list li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .now-playing {
+            font-size: 0.9rem;
+            color: var(--light-text);
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+        
+        .recording-indicator {
+            display: none;
+            margin-top: 1rem;
+            color: var(--accent-color);
+            font-weight: bold;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🎶 Music Player with Voice Control</h1>
+        <p>Control your music with voice commands</p>
+    </header>
+    
+    <main>
+        <div class="player-container">
+            <audio id="audioPlayer" controls>
+                <source src="{{ url_for('static', filename='music/' + songs[0]) }}" type="audio/mp3">
+                Your browser does not support the audio element.
+            </audio>
+            
+            <p class="now-playing" id="nowPlaying">Now playing: {{ songs[0] }}</p>
+            
+            <div class="controls">
+                <button onclick="recordCommand()">
+                    <span>🎤</span> Record Command
+                </button>
+                
+                <div class="recording-indicator" id="recordingIndicator">
+                    Listening for command...
+                </div>
+                
+                <div id="result"></div>
+            </div>
+        </div>
+        
+        <div class="command-list">
+            <h3>Available Voice Commands:</h3>
+            <ul>
+                <li><strong>"Play"</strong> - Play the current song</li>
+                <li><strong>"Pause"</strong> - Pause playback</li>
+                <li><strong>"Volume up"</strong> - Increase volume</li>
+                <li><strong>"Volume down"</strong> - Decrease volume</li>
+                <li><strong>"Next"</strong> - Play next song</li>
+                <li><strong>"Close"</strong> - Close the application</li>
+            </ul>
+        </div>
+    </main>
+
+    <script>
+        // Simpan array songs dari Flask ke variabel JS dengan benar
+        const audios = JSON.parse('{{ songs | tojson | safe }}');
+        const player = document.getElementById('audioPlayer');
+        const nowPlaying = document.getElementById('nowPlaying');
+        const recordingIndicator = document.getElementById('recordingIndicator');
+
+        function recordCommand() {
+            // Show recording indicator
+            recordingIndicator.style.display = 'block';
+            document.getElementById('result').innerText = '';
+            
+            fetch('/record', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    recordingIndicator.style.display = 'none';
+                    document.getElementById('result').innerText = "You said: " + data.command;
+                    handleCommand(data.command);
+                })
+                .catch(err => {
+                    recordingIndicator.style.display = 'none';
+                    console.error('Error recording command:', err);
+                    document.getElementById('result').innerText = "Error: Could not process your command";
+                });
+        }
+
+        function handleCommand(cmd) {
+            const normalizedCmd = cmd.toLowerCase();
+            
+            if (normalizedCmd.includes('play')) {
+                player.play();
+                document.getElementById('result').innerText += " → Playing music";
+            } else if (normalizedCmd.includes('pause')) {
+                player.pause();
+                document.getElementById('result').innerText += " → Playback paused";
+            } else if (normalizedCmd.includes('up') || normalizedCmd.includes('increase')) {
+                player.volume = Math.min(1, player.volume + 0.1);
+                document.getElementById('result').innerText += ` → Volume increased to ${Math.round(player.volume * 100)}%`;
+            } else if (normalizedCmd.includes('down') || normalizedCmd.includes('decrease')) {
+                player.volume = Math.max(0, player.volume - 0.1);
+                document.getElementById('result').innerText += ` → Volume decreased to ${Math.round(player.volume * 100)}%`;
+            } else if (normalizedCmd.includes('next')) {
+                let current = player.currentSrc.split('/').pop();
+                let idx = audios.indexOf(current);
+                let nextSong = audios[(idx + 1) % audios.length];
+                player.src = `/static/music/${nextSong}`;
+                player.play();
+                nowPlaying.textContent = `Now playing: ${nextSong}`;
+                document.getElementById('result').innerText += ` → Playing next song: ${nextSong}`;
+            } else if (normalizedCmd.includes('close') || normalizedCmd.includes('exit')) {
+                document.getElementById('result').innerText += " → Closing application";
+                setTimeout(() => window.close(), 1000);
+            } else {
+                document.getElementById('result').innerText += " → Command not recognized";
+                console.log("Command not recognized:", cmd);
+            }
+        }
+        
+        // Update now playing when song changes
+        player.addEventListener('play', function() {
+            const currentSong = player.currentSrc.split('/').pop();
+            nowPlaying.textContent = `Now playing: ${currentSong}`;
+        });
+    </script>
+</body>
+</html>
