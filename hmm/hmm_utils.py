@@ -8,7 +8,7 @@ def extract_features(file_path):
     mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13, hop_length=512)
     return mfcc.T
 
-def load_hmm_model(path='hmm/model.pkl'):
+def load_hmm_model(path='model/hmm_model.pkl'):
     with open(path, 'rb') as f:
         return pickle.load(f)
 
